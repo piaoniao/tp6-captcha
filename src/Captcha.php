@@ -8,13 +8,18 @@
 // +----------------------------------------------------------------------
 // | Author: yunwuxin <448901948@qq.com>
 // +----------------------------------------------------------------------
+// | 修改说明：
+// | 20201010：
+// | 1、删除类变量的类型声明，以适配低版本 PHP
+// | 2、将 session 换成 cache 以适配前后端分离项目
+// +----------------------------------------------------------------------
 
 namespace linjialiang\captcha;
 
 use Exception;
+use think\Cache;
 use think\Config;
 use think\Response;
-use think\Session;
 
 class Captcha
 {
@@ -24,9 +29,9 @@ class Captcha
     private $config = null;
 
     /**
-     * @var Session|null
+     * @var Cache|null
      */
-    private $session = null;
+    private $cache = null;
 
     // 验证码实例
     private $im = null;
@@ -34,52 +39,52 @@ class Captcha
     private $draw = null;
 
     // 验证码颜色
-    protected string $color = '';
+    protected $color = '';
     // 验证码字符集合
-    protected string $codeSet = '2345678abcdefhjkmnpqrtuvwxyABCDEFHJKMNPQRTUVWXY';
+    protected $codeSet = '2345678abcdefhjkmnpqrtuvwxyABCDEFHJKMNPQRTUVWXY';
     // 验证码过期时间（s）
-    protected int $expire = 1800;
+    protected $expire = 1800;
     // 使用中文验证码
-    protected bool $useZh = false;
+    protected $useZh = false;
     // 中文验证码字符串
-    protected string $zhSet = '天地玄黄宇宙洪荒日月列张寒来暑往秋收冬闰余成岁律吕调阳云腾致雨结为金生丽水玉出昆冈剑号巨珠称夜光果珍李重姜海咸河淡羽翔龙师火帝鸟官人皇始制文字乃服衣裳推位让国有唐吊民伐罪周发汤坐朝问道垂拱平章爱育';
+    protected $zhSet = '天地玄黄宇宙洪荒日月列张寒来暑往秋收冬闰余成岁律吕调阳云腾致雨结为金生丽水玉出昆冈剑号巨珠称夜光果珍李重姜海咸河淡羽翔龙师火帝鸟官人皇始制文字乃服衣裳推位让国有唐吊民伐罪周发汤坐朝问道垂拱平章爱育';
     // 算术验证码
-    protected bool $math = false;
+    protected $math = false;
     // 算术验证码字符集合
-    protected string $mathSet = '0123456789+-*/=';
+    protected $mathSet = '0123456789+-*/=';
     // 随机运算符号，支持加法(+)、减法(-)、乘法(*)、除法(/)四则运算，默认执行加法运算
-    protected array $operators = ['+', '-', '*', '/'];
+    protected $operators = ['+', '-', '*', '/'];
     // 使用背景图片
-    protected bool $useImgBg = false;
+    protected $useImgBg = false;
     // 验证码字体大小(px)
-    protected int $fontSize = 25;
+    protected $fontSize = 25;
     // 是否画混淆曲线
-    protected bool $useCurve = false;
+    protected $useCurve = false;
     // 是否添加杂点
-    protected bool $useNoise = false;
+    protected $useNoise = false;
     // 杂点大小
-    protected int $fontSizeNoise = 20;
+    protected $fontSizeNoise = 20;
     // 验证码图片高度
-    protected int $imageH = 0;
+    protected $imageH = 0;
     // 验证码图片宽度
-    protected int $imageW = 0;
+    protected $imageW = 0;
     // 验证码位数
-    protected int $length = 5;
+    protected $length = 5;
     // 验证码字体，不设置随机获取
-    protected string $fontFamily = '';
+    protected $fontFamily = '';
     // 背景颜色
-    protected string $bg = '';
+    protected $bg = '';
 
     /**
      * 架构方法 设置参数
      * @access public
-     * @param Config  $config
-     * @param Session $session
+     * @param Config $config
+     * @param Cache $cache
      */
-    public function __construct(Config $config, Session $session)
+    public function __construct(Config $config, Cache $cache)
     {
-        $this->config  = $config;
-        $this->session = $session;
+        $this->config = $config;
+        $this->cache = $cache;
     }
 
     /**
@@ -111,11 +116,11 @@ class Captcha
         $bag = '';
 
         if ($this->math) {
-            $y   = random_int(1, 9);
+            $y = random_int(1, 9);
 
             switch ($this->operators ? $this->operators[array_rand($this->operators)] : '+') {
                 case '-':
-                    $x   = random_int(10, 30);
+                    $x = random_int(10, 30);
                     $bag = "{$x} - {$y} =";
                     $key = $x - $y;
                     break;
@@ -130,7 +135,7 @@ class Captcha
                     $key = $x / $y;
                     break;
                 default:
-                    $x   = random_int(10, 30);
+                    $x = random_int(10, 30);
                     $bag = "{$x} + {$y} =";
                     $key = $x + $y;
                     break;
@@ -153,7 +158,7 @@ class Captcha
 
         $hash = password_hash($key, PASSWORD_BCRYPT, ['cost' => 10]);
 
-        $this->session->set('captcha', [
+        $this->cache->set('captcha', [
             'key' => $hash,
         ]);
 
@@ -192,14 +197,14 @@ class Captcha
      * 输出验证码并把验证码的值保存的session中
      * @access public
      * @param null|string $config
-     * @param bool        $api
+     * @param bool $api
      * @return Response
      */
     public function create(string $config = null, bool $api = false): Response
     {
         $this->configure($config);
 
-        if($this->math){
+        if ($this->math) {
             $this->length = 5;
         }
 
@@ -210,7 +215,7 @@ class Captcha
 
         if ($this->useImgBg) {
             $path = __DIR__ . '/../assets/bgs/';
-            $dir  = dir($path);
+            $dir = dir($path);
             $bgs = [];
             while (false !== ($file = $dir->read())) {
                 if ('.' != $file[0] && substr($file, -4) == '.png') {
@@ -222,7 +227,7 @@ class Captcha
             $this->im = new \Imagick($gb);
             $this->im->resizeImage($this->imageW, $this->imageH, \Imagick::FILTER_POINT, 1);
         } else {
-            $this->im =  new \Imagick();
+            $this->im = new \Imagick();
             // 建立一幅大小为 $this->imageW * $this->imageH 的画布，背景色为 $this->bg
             $this->im->newImage($this->imageW, $this->imageH, $this->bg ? $this->bg : 'rgba(243, 251, 254, 1)');
         }
@@ -233,7 +238,7 @@ class Captcha
         $fontPath = __DIR__ . '/../assets/' . ($this->math ? 'fonts@math' : ($this->useZh ? 'fonts@zh' : 'fonts@default')) . '/';
 
         if (empty($this->fontFamily)) {
-            $dir  = dir($fontPath);
+            $dir = dir($fontPath);
             $fontArray = [];
             while (false !== ($file = $dir->read())) {
                 if ('.' != $file[0] && preg_match("/^\.(ttf|ttc|otc)$/i", substr($file, -4))) {
@@ -258,8 +263,8 @@ class Captcha
 
         // 将验证码字符，挨个画出来
         foreach ($text as $index => $char) {
-            $x     = $this->fontSize * ($index + 1) * mt_rand(1.2, 1.6) * ($this->math ? 1 : 1.5);
-            $y     = $this->fontSize + mt_rand(10, 20);
+            $x = $this->fontSize * ($index + 1) * mt_rand(1.2, 1.6) * ($this->math ? 1 : 1.5);
+            $y = $this->fontSize + mt_rand(10, 20);
             $angle = $this->math ? 0 : mt_rand(-20, 20);
 
             // 验证码文字以及坐标
@@ -270,12 +275,12 @@ class Captcha
             if (!$this->color) {
                 $this->draw->setFillColor(
                     'rgb(' .
-                        mt_rand(1, 150)
-                        . ',' .
-                        mt_rand(1, 150)
-                        . ',' .
-                        mt_rand(1, 150)
-                        . ')'
+                    mt_rand(1, 150)
+                    . ',' .
+                    mt_rand(1, 150)
+                    . ',' .
+                    mt_rand(1, 150)
+                    . ')'
                 );
             } else {
                 $this->draw->setFillColor($this->color);
@@ -324,12 +329,12 @@ class Captcha
         // 文本随机颜色（验证码颜色）
         $this->draw->setFillColor(
             'rgb(' .
-                mt_rand(150, 225)
-                . ',' .
-                mt_rand(150, 225)
-                . ',' .
-                mt_rand(150, 225)
-                . ')'
+            mt_rand(150, 225)
+            . ',' .
+            mt_rand(150, 225)
+            . ',' .
+            mt_rand(150, 225)
+            . ')'
         );
 
         // 曲线前部分
@@ -345,7 +350,7 @@ class Captcha
         for ($px = $px1; $px <= $px2; $px = $px + 1) {
             if (0 != $w) {
                 $py = $A * sin($w * $px + $f) + $b + $this->imageH / 2; // y = Asin(ωx+φ) + b
-                $i  = (int) ($this->fontSize / 5);
+                $i = (int)($this->fontSize / 5);
                 $coord = [];    // 坐标
                 while ($i > 0) {
                     $coord[] = ['x' => $px + $i, 'y' => $py + $i];
@@ -356,18 +361,18 @@ class Captcha
         }
 
         // 曲线后部分
-        $A   = mt_rand(1, $this->imageH / 2); // 振幅
-        $f   = mt_rand(-$this->imageH / 4, $this->imageH / 4); // X轴方向偏移量
-        $T   = mt_rand($this->imageH, $this->imageW * 2); // 周期
-        $w   = (2 * M_PI) / $T;
-        $b   = $py - $A * sin($w * $px + $f) - $this->imageH / 2;
+        $A = mt_rand(1, $this->imageH / 2); // 振幅
+        $f = mt_rand(-$this->imageH / 4, $this->imageH / 4); // X轴方向偏移量
+        $T = mt_rand($this->imageH, $this->imageW * 2); // 周期
+        $w = (2 * M_PI) / $T;
+        $b = $py - $A * sin($w * $px + $f) - $this->imageH / 2;
         $px1 = $px2;
         $px2 = $this->imageW;
 
         for ($px = $px1; $px <= $px2; $px = $px + 1) {
             if (0 != $w) {
                 $py = $A * sin($w * $px + $f) + $b + $this->imageH / 2; // y = Asin(ωx+φ) + b
-                $i  = (int) ($this->fontSize / 5);
+                $i = (int)($this->fontSize / 5);
                 $coord = [];    // 坐标
                 while ($i > 0) {
                     $coord[] = ['x' => $px + $i, 'y' => $py + $i];
@@ -407,14 +412,14 @@ class Captcha
             // 文本随机颜色（验证码颜色）
             $this->draw->setFillColor(
                 'rgba(' .
-                    mt_rand(150, 225)
-                    . ',' .
-                    mt_rand(150, 225)
-                    . ',' .
-                    mt_rand(150, 225)
-                    . ',' .
-                    mt_rand(3, 5) / 10
-                    . ')'
+                mt_rand(150, 225)
+                . ',' .
+                mt_rand(150, 225)
+                . ',' .
+                mt_rand(150, 225)
+                . ',' .
+                mt_rand(3, 5) / 10
+                . ')'
             );
             // 图片上插入随机文本（验证码）
             $this->draw->annotation(mt_rand(-10, $this->imageW), mt_rand(-10, $this->imageH), $char);

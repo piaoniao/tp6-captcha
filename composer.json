@@ -1,10 +1,10 @@
 {
-    "name": "linjialiang/tp6-captcha",
+    "name": "piaoniao/tp6-captcha",
     "description": "The Captcha class library for ThinkPHP 6.0, which relies on php_Imagick",
     "authors": [
         {
-            "name": "linjialiang",
-            "email": "linjialiang@163.com"
+            "name": "piaoniao",
+            "email": "1254103781@qq.com"
         }
     ],
     "license": "Apache-2.0",
