@@ -9,7 +9,6 @@
 // | Author: yunwuxin <448901948@qq.com>
 // +----------------------------------------------------------------------
 // | 修改说明：
-// | 20201010：
 // | 将 session 换成 cache 以适配前后端分离项目
 // +----------------------------------------------------------------------
 
@@ -17,8 +16,8 @@ namespace linjialiang\captcha;
 
 class CaptchaController
 {
-    public function index(Captcha $captcha, $config = null)
+    public function index(Captcha $captcha, $codeId)
     {
-        return $captcha->create($config);
+        return $captcha->create($codeId);
     }
 }

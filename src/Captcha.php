@@ -9,7 +9,6 @@
 // | Author: yunwuxin <448901948@qq.com>
 // +----------------------------------------------------------------------
 // | 修改说明：
-// | 20201010：
 // | 1、删除类变量的类型声明，以适配低版本 PHP
 // | 2、将 session 换成 cache 以适配前后端分离项目
 // +----------------------------------------------------------------------
@@ -158,10 +157,6 @@ class Captcha
 
         $hash = password_hash($key, PASSWORD_BCRYPT, ['cost' => 10]);
 
-        $this->cache->set('captcha', [
-            'key' => $hash,
-        ]);
-
         return [
             'value' => $bag,
             'key'   => $hash,
@@ -171,24 +166,24 @@ class Captcha
     /**
      * 验证验证码是否正确
      * @access public
+     * @param string $codeId 用户验证码 ID
      * @param string $code 用户验证码
      * @return bool 用户验证码是否正确
      */
-    public function check(string $code): bool
+    public function check(string $codeId, string $code): bool
     {
-        if (!$this->session->has('captcha')) {
+        if (!$this->cache->has('captcha:' . $codeId)) {
             return false;
         }
 
-        $key = $this->session->get('captcha.key');
+        $captcha = $this->cache->get('captcha:' . $codeId);
+        $key = $captcha['key'];
 
         $code = mb_strtolower($code, 'UTF-8');
 
         $res = password_verify($code, $key);
 
-        if ($res) {
-            $this->session->delete('captcha');
-        }
+        $this->cache->delete('captcha:' . $codeId);
 
         return $res;
     }
@@ -196,12 +191,15 @@ class Captcha
     /**
      * 输出验证码并把验证码的值保存的session中
      * @access public
+     * @param string $codeId
      * @param null|string $config
-     * @param bool $api
      * @return Response
      */
-    public function create(string $config = null, bool $api = false): Response
+    public function create(string $codeId, string $config = null): Response
     {
+        if (empty($codeId)) {
+            throw new \InvalidArgumentException("Error codeId.");
+        }
         $this->configure($config);
 
         if ($this->math) {
@@ -258,6 +256,12 @@ class Captcha
 
         // 获取创建好的验证码
         $generator = $this->generate();
+
+        // 缓存 key (3 分钟过期)
+        $this->cache->set('captcha:' . $codeId, [
+            'key' => $generator['key'],
+        ], 180);
+
         // 将验证码从字符串转成数组
         $text = $this->useZh ? preg_split('/(?<!^)(?!$)/u', $generator['value']) : str_split($generator['value']);
 

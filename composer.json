@@ -10,7 +10,8 @@
     "license": "Apache-2.0",
     "require": {
         "topthink/framework": "^6.0.1",
-        "ext-imagick": "*"
+        "ext-imagick": "*",
+        "ext-mbstring": "*"
     },
     "autoload": {
         "psr-4": {
