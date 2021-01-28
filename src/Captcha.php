@@ -257,10 +257,10 @@ class Captcha
         // 获取创建好的验证码
         $generator = $this->generate();
 
-        // 缓存 key (3 分钟过期)
+        // 缓存 key
         $this->cache->set('captcha:' . $codeId, [
             'key' => $generator['key'],
-        ], 180);
+        ], $this->expire);
 
         // 将验证码从字符串转成数组
         $text = $this->useZh ? preg_split('/(?<!^)(?!$)/u', $generator['value']) : str_split($generator['value']);
